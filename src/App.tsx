@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 type LevelType = 'facil' | 'medio' | 'dificil'
@@ -12,6 +12,8 @@ const CELLSBYLEVEL: Record<LevelType, number> = {
 function App() {
   const [nivel, setNivel] = useState<LevelType>('facil')
   const [gameKey, setGameKey] = useState(false)
+  const [cellOpenned, setCellOpenned] = useState<number[]>([])
+  const selectRef = useRef<HTMLSelectElement>(null)
 
   const cellsMines = useMemo(() => {
     const min = 0
@@ -20,6 +22,18 @@ function App() {
     return Array.from({ length: max }).map(() => Math.floor(Math.random() * (arraySize - min)) + min)
 
   }, [nivel, gameKey])
+
+  console.log(cellsMines)
+
+  useEffect(() => {
+    if (cellOpenned.length === CELLSBYLEVEL[nivel] - cellsMines.length) {
+      alert('You Win')
+      setCellOpenned([])
+      setGameKey(prev => !prev)
+      const value = selectRef.current?.value
+      setNivel(value as LevelType ?? 'facil')
+    }
+  }, [cellOpenned, CELLSBYLEVEL[nivel]])
 
   const checkHowManyMinesAround = useCallback((index: number) => {
     const arraySize = Math.sqrt(CELLSBYLEVEL[nivel])
@@ -56,9 +70,11 @@ function App() {
       alert('Game Over')
       return
     }
-
-    const minesAround = checkHowManyMinesAround(Number(e.currentTarget.dataset.index))
+    e.currentTarget.disabled = true
+    const indexButton = Number(e.currentTarget.dataset.index)
+    const minesAround = checkHowManyMinesAround(indexButton)
     e.currentTarget.innerHTML = minesAround.toString()
+    setCellOpenned(prev => [...prev, indexButton])
 
   }, [checkHowManyMinesAround])
 
@@ -69,8 +85,12 @@ function App() {
     ))
   }, [nivel, handleCellClick, gameKey])
 
-  const handleNovoJogo = () => {
+  const handleNovoJogo = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
     setGameKey(prev => !prev)
+    const value = selectRef.current?.value
+    setNivel(value as LevelType ?? 'facil')
+
   }
 
   return (
@@ -80,7 +100,7 @@ function App() {
         <button className='novo-jogo-button' onClick={handleNovoJogo}>Novo Jogo</button>
         <div className="nivel-container">
           <label htmlFor="nivel">Nivel</label>
-          <select name="nivel" id="nivel" onChange={(e) => { setNivel(e.target.value as LevelType); setGameKey(prev => !prev) }}>
+          <select name="nivel" id="nivel" ref={selectRef}>
             <option value="facil">Facil</option>
             <option value="medio">Medio</option>
             <option value="dificil">Dificil</option>
